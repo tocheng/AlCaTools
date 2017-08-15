@@ -42,8 +42,13 @@ private:
   bool removeKeysFromMap(const std::vector<std::string> &keys, TriggerMap &triggerMap) const;
   bool replaceKeysFromMap(const std::vector<edm::ParameterSet> &alcarecoReplace,
 			  TriggerMap &triggerMap) const;
+
   bool addTriggerLists(const std::vector<edm::ParameterSet> &triggerListsAdd,
 		       AlCaRecoTriggerBits &bits) const;
+
+  bool cloneKeysFromMap(const std::vector<edm::ParameterSet> &alcarecoClone,
+                          AlCaRecoTriggerBits &bits) const;
+
   /// Takes over memory uresponsibility for 'bitsToWrite'. 
   void writeBitsToDB(AlCaRecoTriggerBits *bitsToWrite) const;
 
@@ -53,6 +58,7 @@ private:
   const bool startEmpty_; 
   const std::vector<std::string> listNamesRemove_;
   const std::vector<edm::ParameterSet> triggerListsAdd_;
+  const std::vector<edm::ParameterSet> alcarecoClone_;
   const std::vector<edm::ParameterSet> alcarecoReplace_;
 };
 
@@ -67,6 +73,7 @@ AlCaRecoTriggerBitsRcdUpdate::AlCaRecoTriggerBitsRcdUpdate(const edm::ParameterS
     startEmpty_(cfg.getParameter<bool>("startEmpty")),
     listNamesRemove_(cfg.getParameter<std::vector<std::string> >("listNamesRemove")),
     triggerListsAdd_(cfg.getParameter<std::vector<edm::ParameterSet> >("triggerListsAdd")),
+    alcarecoClone_(cfg.getParameter<std::vector<edm::ParameterSet> >("alcarecoToClone")),
     alcarecoReplace_(cfg.getParameter<std::vector<edm::ParameterSet> >("alcarecoToReplace"))
 {
 }
@@ -93,6 +100,9 @@ void AlCaRecoTriggerBitsRcdUpdate::analyze(const edm::Event& evt, const edm::Eve
 
   // now replace keys 
   this->replaceKeysFromMap(alcarecoReplace_,bitsToWrite->m_alcarecoToTrig);
+
+  // clone/rename existing keys
+  this->cloneKeysFromMap(alcarecoClone_,*bitsToWrite);
 
   // finally write to DB
   this->writeBitsToDB(bitsToWrite);
@@ -126,9 +136,11 @@ bool AlCaRecoTriggerBitsRcdUpdate::removeKeysFromMap(const std::vector<std::stri
 // FIXME: test next line@
       triggerMap.erase(*iKey);
     } else { // not in list ==> misconfiguartion!
+      /*
       throw cms::Exception("BadConfig") << "[AlCaRecoTriggerBitsRcdUpdate::removeKeysFromMap] "
 					<< "Cannot remove key '" << *iKey << "' since not in "
 					<< "list - typo in configuration?\n";
+      */
       return false;
     }
   }
@@ -139,8 +151,9 @@ bool AlCaRecoTriggerBitsRcdUpdate::removeKeysFromMap(const std::vector<std::stri
 bool AlCaRecoTriggerBitsRcdUpdate::replaceKeysFromMap(const std::vector<edm::ParameterSet> &alcarecoReplace,
 						      TriggerMap &triggerMap) const
 {
-
+  
   std::vector<std::pair<std::string,std::string> > keyPairs;
+  keyPairs.reserve(alcarecoReplace.size());
 
   for(auto &iSet : alcarecoReplace ){
     const std::string oldKey(iSet.getParameter<std::string>("oldKey"));
@@ -148,19 +161,54 @@ bool AlCaRecoTriggerBitsRcdUpdate::replaceKeysFromMap(const std::vector<edm::Par
     keyPairs.push_back(std::make_pair(oldKey,newKey));
   }
 
+  bool find = false;
   for(auto& iKey : keyPairs){
     if(triggerMap.find(iKey.first) != triggerMap.end() ){
       std::string bitsToReplace = triggerMap[iKey.first];
       triggerMap.erase(iKey.first);
       triggerMap[iKey.second] = bitsToReplace;
-    } else { // not in list ==> misconfiguration!
+      find = true;
+    } 
+
+    /*
+    else { // not in list ==> misconfiguration!
       edm::LogWarning("AlCaRecoTriggerBitsRcdUpdate") << "[AlCaRecoTriggerBitsRcdUpdate::replaceKeysFromMap] "
 						      << "Cannot replace key '" << iKey.first << "with " << iKey.second << " since not in "
 						      << "list - typo in configuration?\n";
       return false;
     }
+    */
   }
-  return true;
+
+  return find;
+}
+
+
+bool AlCaRecoTriggerBitsRcdUpdate::cloneKeysFromMap(const std::vector<edm::ParameterSet> &alcarecoClone,
+                                                      AlCaRecoTriggerBits &bits) const
+{
+
+  TriggerMap &triggerMap = bits.m_alcarecoToTrig;
+
+  std::vector<std::pair<std::string,std::string> > keyPairs;
+  keyPairs.reserve(alcarecoClone.size());
+
+  for(auto &iSet : alcarecoClone ){
+    const std::string oldKey(iSet.getParameter<std::string>("oldKey"));
+    const std::string newKey(iSet.getParameter<std::string>("newKey"));
+    keyPairs.push_back(std::make_pair(oldKey,newKey));
+  }
+
+  bool find = false;
+  for(auto& iKey : keyPairs){
+    if(triggerMap.find(iKey.first) != triggerMap.end() ){
+      std::string bitsToClone = triggerMap[iKey.first];
+      triggerMap[iKey.second] = bitsToClone;
+      find = true;
+    }
+
+  }
+  return find;
 }
 
 ///////////////////////////////////////////////////////////////////////

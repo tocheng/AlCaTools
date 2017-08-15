@@ -12,11 +12,8 @@
 #
 # See also further comments below, especially the WARNING.
 #
-#  Author    : Gero Flucke
-#  Date      : February 2009
-#  $Revision: 1.3 $
-#  $Date: 2009/04/21 14:42:50 $
-#  (last update by $Author: flucke $)
+#  Author    : Marco Musich
+#  Date      : Feb 2016
 
 import FWCore.ParameterSet.Config as cms
 import FWCore.ParameterSet.VarParsing as VarParsing 
@@ -32,7 +29,7 @@ options.register( "inputDB",
                   )
 
 options.register( "inputTag", 
-                  "AlCaRecoHLTpaths8e29_1e31_v7_hlt",  #default value
+                  "AlCaRecoHLTpaths8e29_1e31_v24_offline",  #default value
                   VarParsing.VarParsing.multiplicity.singleton, 
                   VarParsing.VarParsing.varType.string,
                   "the input tag"
@@ -74,9 +71,12 @@ process.AlCaRecoTriggerBitsRcdUpdate.firstRunIOV = options.firstRun # docu see..
 #process.AlCaRecoTriggerBitsRcdUpdate.lastRunIOV = -1 # ...cfi
 # If you want to start from scratch, comment the next line:
 process.AlCaRecoTriggerBitsRcdUpdate.startEmpty = False
+
+
+# remove and update value (HLT paths)
 # In case you want to remove 'keys', use this possibly comma separated list.
 # Also if you want to replace settings for one 'key', you have to remove it first.
-#process.AlCaRecoTriggerBitsRcdUpdate.listNamesRemove = ["SiStripCalZeroBias"]
+process.AlCaRecoTriggerBitsRcdUpdate.listNamesRemove = ["HcalCalGammaJet"]
 # Here specifiy 'key' and corresponding paths for new entries or updated ones:
 # process.AlCaRecoTriggerBitsRcdUpdate.triggerListsAdd = [
 #     cms.PSet(listName = cms.string('AlCaEcalTrg'), # to be updated
@@ -84,12 +84,108 @@ process.AlCaRecoTriggerBitsRcdUpdate.startEmpty = False
 #              )
 #     ]
 
-process.AlCaRecoTriggerBitsRcdUpdate.triggerListsAdd = []
+#add
+process.AlCaRecoTriggerBitsRcdUpdate.triggerListsAdd = [
+    ## add Gamma+jet to each IOV
+    cms.PSet(listName = cms.string('HcalCalGammaJet'),
+             hltPaths = cms.vstring('HLT_L1SingleEG*', 'HLT_Photon*')),
+
+    cms.PSet(listName = cms.string('HcalCalPedestal'), 
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('HcalCalHBHEMuonFilter'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('HcalCalIsolatedBunchSelector'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('HcalCalIsolatedBunchFilter'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('HcalCalIsoTrkFilter'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalESAlign'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalRecalElectron'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalUncalWElectron'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalUncalZElectron'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalUncalZSCElectron'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalCalWElectron'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('EcalCalZElectron'),
+             hltPaths = cms.vstring('*')),
+
+    # Cosmic during Collisions
+    cms.PSet(listName = cms.string('MuAlGlobalCosmicsInCollisions'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('TkAlCosmicsInCollisions'),
+             hltPaths = cms.vstring('*')),
+
+    # Pixle has their own workflow. They don't need this one. Just for completenes for now
+    cms.PSet(listName = cms.string('SiPixelLorentzAngle'),
+             hltPaths = cms.vstring('HLT1MuonIso','HLT2MuonNonIso','HLT2MuonJPsi','HLT2MuonUpsilon','HLT2MuonZ','HLT2MuonSameSign')),
+
+    ### PCL is added as "*" pass through
+    cms.PSet(listName = cms.string('PromptCalibProdSiStripGainsAAG'),
+             hltPaths = cms.vstring('*')),
+    cms.PSet(listName = cms.string('PromptCalibProdSiStrip'),
+             hltPaths = cms.vstring('*')),
+
+    ## PA stuff
+    cms.PSet(listName = cms.string('TkAlUpsilonMuMuPA'),
+             hltPaths = cms.vstring('HLT_*')),
+    cms.PSet(listName = cms.string('TkAlZMuMuPA'),
+             hltPaths = cms.vstring('HLT_*')),
+    cms.PSet(listName = cms.string('TkAlMuonIsolatedPA'),
+             hltPaths = cms.vstring('HLT_*'))
+    ]
+
+#update key
+process.AlCaRecoTriggerBitsRcdUpdate.alcarecoToClone = []
+
+#update key
 process.AlCaRecoTriggerBitsRcdUpdate.alcarecoToReplace = [
     cms.PSet(oldKey = cms.string('SiStripCalMinBiasAfterAbortGap'),
              newKey = cms.string('SiStripCalMinBiasAAG')
+             ),
+    cms.PSet(oldKey = cms.string('SiStripCalMinBiasAfterAbortGapHI'),
+             newKey = cms.string('SiStripCalMinBiasAAGHI')
+             ),
+    cms.PSet(oldKey = cms.string('MuAlcaDtCalibHI'),
+             newKey = cms.string('DtCalibHI')
+             ),
+    cms.PSet(oldKey = cms.string('ALCARECOLumiPixels'),
+             newKey = cms.string('LumiPixels')
+             ),
+    cms.PSet(oldKey = cms.string('ALCARECOHcalCalMinBias'),
+             newKey = cms.string('HcalCalMinBias')
+             ),
+    cms.PSet(oldKey = cms.string('ALCARECOEcalCalPi0Calib'),
+             newKey = cms.string('EcalCalPi0Calib')
+             ),
+    cms.PSet(oldKey = cms.string('ALCARECOEcalCalEtaCalib'),
+             newKey = cms.string('EcalCalEtaCalib')
+             ),
+    cms.PSet(oldKey = cms.string('MuAlcaDtCalibCosmics'),
+             newKey = cms.string('DtCalibCosmics')
+             ),
+    cms.PSet(oldKey = cms.string('MuAlcaDtCalibMu'),
+             newKey = cms.string('DtCalib')
+             ),
+    cms.PSet(oldKey = cms.string('AlCaEcalTrg'),
+             newKey = cms.string('EcalTrg')
+             ),
+    cms.PSet(oldKey = cms.string('VertexPixelZeroBias'),
+             newKey = cms.string('LumiPixelsMinBias')
+             ),
+    cms.PSet(oldKey = cms.string('PromptCalibProdForBS'),
+             newKey = cms.string('PromptCalibProd')
              )
+
     ]
+
+
+
 
 # No data, but have to specify run number if you do not want 1, see below:
 process.source = cms.Source("EmptySource",
